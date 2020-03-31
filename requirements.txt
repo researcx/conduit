@@ -1,0 +1,7 @@
+pymsql
+mysql-connector-python
+sqlalchemy
+twisted
+cryptography
+pyopenssl
+service_identity
