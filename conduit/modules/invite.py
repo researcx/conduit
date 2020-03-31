@@ -5,9 +5,7 @@ from conduit.db.users import Users
 from conduit.db.servers import Servers
 from conduit.db.messages import Messages
 
-from conduit.functions import spliceNick
-            
-re_user = '(%s)!(%s)@([A-Za-z0-9\-\./]+)' % (re_nick, re_ident)
+from conduit.functions import spliceNick, re_user
 
 @conduit.module_loader.add_command("invite")
 def invite_user(data, server):            

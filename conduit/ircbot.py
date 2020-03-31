@@ -2,7 +2,7 @@
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol, task, ssl
 from conduit.functions import html_escape, splice, spliceNick
-import time, sys, re, logging, json, coloredlogs
+import os, time, sys, re, logging, json, coloredlogs, threading
 
 import conduit.db.connect as Connector
 from conduit.db.users import Users
@@ -10,12 +10,6 @@ from conduit.db.servers import Servers
 from conduit.db.messages import Messages
 
 import conduit.module_loader
-
-re_chan = '[&\#][^ ,\x07]{1,200}'
-re_nick = '[A-Za-z\[\]\\`_\^\{\|\}][A-Za-z0-9\[\]\\`_\^\{\|\}\-]{0,8}'
-re_ident = '[^\r\n@ ]+'
-re_privmsg = ':(%s)!(%s)@([A-Za-z0-9\-\./]+) PRIVMSG (%s) :(.*)' % (re_nick, re_ident, re_chan)
-re_user = '(%s)!(%s)@([A-Za-z0-9\-\./]+)' % (re_nick, re_ident)
 
 def build_hostmask(nick, user, host):
         who_full = nick + "!" + user + "@" + host
@@ -79,8 +73,11 @@ class Conduit(irc.IRCClient):
                 Connector.session.commit()
 
     def getServer(self, server_id):
-        currentServer = Connector.session.query(Servers).filter(Servers.id == server_id).first()
-        return currentServer.name
+        for server in self.config.data["servers"]:
+            if server["id"] == server["name"]:
+                print(server["name"])
+                return server["name"]
+        return 0
 
     def irc_RPL_WHOREPLY(self, *nargs):
         who_nick = nargs[1][5]
@@ -140,7 +137,7 @@ class Conduit(irc.IRCClient):
                 message.sent = message.sent + str(self.server_id) + ";"
                 Connector.session.commit()
 
-class ConduitFactory(ReconnectingClientFactory):
+class ConduitFactory(protocol.ReconnectingClientFactory):
     def __init__(self, multiplexer):
         self.multiplexer = multiplexer
         self.protocol = Conduit
@@ -158,26 +155,27 @@ class Config(object):
     def __init__(self, path):
         try:
             with open(path) as config_file:
-                self.data = json.loads(config_file)
+                self.data = json.load(config_file)
         except:
             logging.error(f"Could not load the config from {path}.")
         else:
             logging.info(f"Successfully loaded the config from {path}.")
 
-class ConduitMultiplexer(Object):
+class ConduitMultiplexer():
     def __init__(self):
         self.conduits = []
         self.config = None
         self.commands = None
 
     def start(self):
-        self.config = Config("data/bot.cfg")
-        conduit.module_loader.import_dir("modules/")
+        self.config = Config(os.path.dirname(os.path.abspath( __file__ )) + "/data/bot.cfg")
+        conduit.module_loader.base_dir = os.path.dirname(os.path.abspath( __file__ ))
+        conduit.module_loader.import_dir("./modules/")
         self.commands = conduit.module_loader.commands
-        f = protocol.ConduitFactory()
+        f = ConduitFactory(self)
         for server in self.config.data["servers"]:
             security_str = "secure" if server["secure"] else "insecure"
-            logging.info(f"Attempting {security_str} connection to {server["endpoint"]}:{server["port"]}.")
+            logging.info(f'Attempting {security_str} connection to {server["endpoint"]}:{server["port"]}.')
             if server["secure"]:
                 reactor.connectSSL(server["endpoint"], server["port"], f, ssl.ClientContextFactory())
             else:
