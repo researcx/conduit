@@ -5,3 +5,4 @@ twisted
 cryptography
 pyopenssl
 service_identity
+coloredlogs
