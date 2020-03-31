@@ -22,9 +22,9 @@ def invite_user(data, server):
         rank = 100
         rank_name = "op"
     userRegex = re.findall(re_user,  msg[1])
-    addUser = self.addUser(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, rank, 0)
+    addUser = server.addUser(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, rank, 0)
     if addUser:
-        self.describe(serv_chan, "invited " +msg[1] + " ("+ rank_name +")")
+        server.describe(serv_chan, "invited " +msg[1] + " ("+ rank_name +")")
     else:
-        self.say(serv_chan, msg[1] + " is already in the database")
+        server.say(serv_chan, msg[1] + " is already in the database")
     

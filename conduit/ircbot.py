@@ -187,18 +187,18 @@ class ConduitMultiplexer(Object):
 
 def main():
     threading.current_thread().name = 'Conduit'
-	# Sets up a debug level logger that overwrites the file
-	logging.basicConfig(level=logging.DEBUG,filemode="w")
-	logFormatter = logging.Formatter("[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s", "%Y-%m-%d %H:%M:%S")
-	rootLogger = logging.getLogger()
-	# Remove the default logger.
-	rootLogger.handlers = []
-	# Hook the logger up to the file "server.log"
-	fileHandler = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath( __file__ )), "server.log"))
-	fileHandler.setFormatter(logFormatter)
-	rootLogger.addHandler(fileHandler)
-	# Hook the logger up to the console
-	coloredlogs.install(level='DEBUG',fmt="[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s")
+    # Sets up a debug level logger that overwrites the file
+    logging.basicConfig(level=logging.DEBUG,filemode="w")
+    logFormatter = logging.Formatter("[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s", "%Y-%m-%d %H:%M:%S")
+    rootLogger = logging.getLogger()
+    # Remove the default logger.
+    rootLogger.handlers = []
+    # Hook the logger up to the file "server.log"
+    fileHandler = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath( __file__ )), "server.log"))
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+    # Hook the logger up to the console
+    coloredlogs.install(level='DEBUG',fmt="[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s")
     conduitmx = ConduitMultiplexer()
     conduitmx.start()
 
