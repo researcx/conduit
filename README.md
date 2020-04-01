@@ -29,8 +29,7 @@ Remembers all invited users with a rank which the bots will automatically promot
    - [ ] Automatically run commands on connect/reconnect
    - [ ] More than one bot owner
    - [ ] Autojoin more than one channel
-   - [ ] Script to add and modify servers in the database
-   - [ ] OR move servers out from the database to be stored in a configuration file.
+   - [x] Store servers in a configuration file.
  - [ ] Have conduit create its own sqlite database.
  - [ ] Python version check to make sure >3.x is being used.
 
