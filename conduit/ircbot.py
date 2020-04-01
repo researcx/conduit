@@ -31,8 +31,8 @@ class Conduit(irc.IRCClient):
         self.blacklist = None
         self.commands = None
         self.command_regex = None
-        self.lastMessage = None
-        self.onlineUserList = None
+        self.lastMessage = 0
+        self.onlineUserList = {}
 
     def connectionMade(self):
         logging.debug(f'connectionMade called.')
@@ -55,8 +55,6 @@ class Conduit(irc.IRCClient):
             logging.debug(f'blacklisted command: ' + str(self.commands[blacklisted_command]))
             del self.commands[blacklisted_command]
         self.command_regex = re.compile("^\!(\w+)")
-        self.lastMessage = 0
-        self.onlineUserList = {}
         logging.debug(f'got to the end of connectionMade')
         irc.IRCClient.connectionMade(self)
 
@@ -85,7 +83,7 @@ class Conduit(irc.IRCClient):
 
     def check_status(self, channel):
         logging.debug(f'check_status called.')
-        onlineUsers = Connector.session.query(Users).filter(Users.channel == channel).all()
+        onlineUsers = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.channel == channel).filter(Users.server == self.server_id).all()
         for user in onlineUsers:
             userMask = build_nickless_hostmask(user.user, user.host)
             if userMask in self.onlineUserList[channel]:
@@ -97,37 +95,17 @@ class Conduit(irc.IRCClient):
 
     def get_server(self, server_id):
         logging.debug(f'get_server called.')
-        for server in self.config.data["servers"]:
-            if server["id"] == server["name"]:
-                print(server["name"])
-                return server["name"]
-        return 0
-
-    def irc_RPL_WHOREPLY(self, *nargs):
-        logging.debug(f'irc_RPL_WHOREPLY called.')
-        who_nick = nargs[1][5]
-        who_user = nargs[1][2]
-        who_host = nargs[1][3]
-        who_channel = nargs[1][1]
-
-        # print(build_hostmask(who_nick, who_user, who_host))
-        # print(build_nickless_hostmask(who_user, who_host))
-        if who_channel in onlineUserList:
-            self.onlineUserList[who_channel].append(build_nickless_hostmask(who_user, who_host))
-        else:
-            self.onlineUserList[who_channel] = [build_nickless_hostmask(who_user, who_host)]
- 
-        if who_nick != serv_nick:
-            self.add_user(who_nick, who_user, who_host, who_channel, 0, 1)
-
-    def irc_RPL_ENDOFWHO(self, *nargs):
-        logging.debug(f'irc_RPL_ENDOFWHO called.')
-        self.check_status(nargs[1][1])
+        for serverDict in self.factory.multiplexer.config.data["servers"]:
+            if serverDict["id"] == server_id:
+                return serverDict
+        return "?"
 
     def signedOn(self):
         logging.debug(f'signedOn called.')
         for channel in self.channels:
+            self.onlineUserList[channel] = []
             self.join(channel)
+            logging.debug(self.onlineUserList[channel])
 
     def joined(self, channel):
         logging.debug(f'joined called.')
@@ -141,8 +119,11 @@ class Conduit(irc.IRCClient):
         if match_object:
             # command logic
             isOwner = user.split('!')[1] in self.owner
-            if match.group(0) in self.commands:
-                self.commands[match.group(0)]((user, channel, message), self)
+            logging.debug(f'isOwner: ' + user.split('!')[1] + ' is ' + self.owner)
+            logging.debug(f'is ' + str(match_object.group(1))  + ' in ' + str(self.commands) + '?')
+            if match_object.group(1) in self.commands:
+                logging.debug(f'matched: ' + str(match_object.group(1))  + ' is in ' + str(self.commands))
+                self.commands[match_object.group(1)]((user, channel, message), self)
         else:
             self.save_message(user, channel, message, "PRIVMSG")
 
@@ -169,6 +150,33 @@ class Conduit(irc.IRCClient):
                     self.msg(message.channel, "<" + spliceNick(sender) + "> " + message.message)
                 message.sent = message.sent + str(self.server_id) + ";"
                 Connector.session.commit()
+
+    ## Twisted overrides
+    def irc_RPL_WHOREPLY(self, *nargs):
+        logging.debug(f'irc_RPL_WHOREPLY called.')
+        who_nick = nargs[1][5]
+        who_user = nargs[1][2]
+        who_host = nargs[1][3]
+        who_channel = nargs[1][1]
+
+        # print(build_hostmask(who_nick, who_user, who_host))
+        # print(build_nickless_hostmask(who_user, who_host))
+        
+        if who_channel in self.channels:
+            self.onlineUserList[who_channel].append(build_nickless_hostmask(who_user, who_host))
+            logging.debug(self.onlineUserList[who_channel])
+        else:
+            self.onlineUserList[who_channel] = [build_nickless_hostmask(who_user, who_host)]
+            logging.debug(self.onlineUserList[who_channel])
+ 
+        logging.debug(f"comparing " + who_nick + " to " + self.nickname)
+        if who_nick != self.nickname:
+            logging.debug(who_nick + " is not " + self.nickname)
+            self.add_user(who_nick, who_user, who_host, who_channel, 0, 1)
+
+    def irc_RPL_ENDOFWHO(self, *nargs):
+        logging.debug(f'irc_RPL_ENDOFWHO called.')
+        self.check_status(nargs[1][1])
 
 class ConduitFactory(protocol.ReconnectingClientFactory):
     logging.debug(f'ConduitFactory called.')

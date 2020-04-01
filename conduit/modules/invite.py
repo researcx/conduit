@@ -7,8 +7,11 @@ from conduit.db.messages import Messages
 
 from conduit.functions import spliceNick, re_user
 
+import logging
+
 @conduit.module_loader.add_command("invite")
-def invite_user(data, server):            
+def invite_user(data, server):
+    logging.debug(f'invite_user called.')
     msg = data[2].split(" ")
     isCommand = 1
     rank = 1
