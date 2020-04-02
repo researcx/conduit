@@ -26,6 +26,14 @@ def splice(a,b,c,d=None):
 def spliceNick(nick):
     return splice(nick,(1,1),'\u200B')
 
+def build_hostmask(nick, user, host):
+        who_full = nick + "!" + user + "@" + host
+        return who_full
+
+def build_nickless_hostmask(user, host):
+        who_mask = user + "@" + host
+        return who_mask
+
 class RepeatTimer(Timer):
     def run(self):
         while not self.finished.wait(self.interval):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol, task, ssl
-from conduit.functions import html_escape, splice, spliceNick
+from conduit.functions import html_escape, splice, spliceNick, build_hostmask, build_nickless_hostmask
 import os, time, sys, re, logging, json, coloredlogs, threading
 
 import conduit.db.connect as Connector
@@ -9,14 +9,6 @@ from conduit.db.messages import Messages
 from conduit.db.users import Users
 
 import conduit.module_loader
-
-def build_hostmask(nick, user, host):
-        who_full = nick + "!" + user + "@" + host
-        return who_full
-
-def build_nickless_hostmask(user, host):
-        who_mask = user + "@" + host
-        return who_mask
 
 class Conduit(irc.IRCClient):
     logging.debug(f'Conduit called.')
@@ -287,7 +279,8 @@ class ConduitMultiplexer():
 
 
 def main():
-    logging.debug(f'main called.')
+    # intro
+    print("                                    $$\\           $$\\   $$\\\n                                    $$ |          \\__|  $$ |    \n $$$$$$$\\  $$$$$$\\  $$$$$$$\\   $$$$$$$ |$$\\   $$\\ $$\\ $$$$$$\\\n   $$  _____|$$  __$$\\ $$  __$$\\ $$  __$$ |$$ |  $$ |$$ |\\_$$  _|  \n$$ /      $$ /  $$ |$$ |  $$ |$$ /  $$ |$$ |  $$ |$$ |  $$ |    \n$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$\\ \n\\$$$$$$$\\ \\$$$$$$  |$$ |  $$ |\\$$$$$$$ |\\$$$$$$  |$$ |  \\$$$$  |\n \\_______| \\______/ \\__|  \\__| \\_______| \\______/ \\__|   \\____/ \n\n")
     threading.current_thread().name = 'Conduit'
     # Sets up a debug level logger that overwrites the file
     logging.basicConfig(level=logging.DEBUG,filemode="w")
@@ -296,7 +289,7 @@ def main():
     # Remove the default logger.
     rootLogger.handlers = []
     # Hook the logger up to the file "server.log"
-    fileHandler = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath( __file__ )), "server.log"))
+    fileHandler = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath( __file__ )), "data/conduit.log"))
     fileHandler.setFormatter(logFormatter)
     rootLogger.addHandler(fileHandler)
     # Hook the logger up to the console
@@ -304,6 +297,5 @@ def main():
     conduitmx = ConduitMultiplexer()
     conduitmx.start()
 
-if __name__ == "__main__":
-    logging.debug(f'__main__ called.')
+if __name__ == "":
     main()
