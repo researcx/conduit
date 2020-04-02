@@ -256,7 +256,7 @@ class ConduitMultiplexer():
 
     def start(self):
         # intro
-        print("\n                                    $$\\           $$\\   $$\\\n                                    $$ |          \\__|  $$ |    \n $$$$$$$\\  $$$$$$\\  $$$$$$$\\   $$$$$$$ |$$\\   $$\\ $$\\ $$$$$$\\\n   $$  _____|$$  __$$\\ $$  __$$\\ $$  __$$ |$$ |  $$ |$$ |\\_$$  _|  \n$$ /      $$ /  $$ |$$ |  $$ |$$ /  $$ |$$ |  $$ |$$ |  $$ |    \n$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$\\ \n\\$$$$$$$\\ \\$$$$$$  |$$ |  $$ |\\$$$$$$$ |\\$$$$$$  |$$ |  \\$$$$  |\n \\_______| \\______/ \\__|  \\__| \\_______| \\______/ \\__|   \\____/ \nA multi-network multi-channel IRC relay.\n\n")
+        print("\n                                    $$\\           $$\\   $$\\\n                                    $$ |          \\__|  $$ |    \n $$$$$$$\\  $$$$$$\\  $$$$$$$\\   $$$$$$$ |$$\\   $$\\ $$\\ $$$$$$\\\n$$  _____|$$  __$$\\ $$  __$$\\ $$  __$$ |$$ |  $$ |$$ |\\_$$  _|  \n$$ /      $$ /  $$ |$$ |  $$ |$$ /  $$ |$$ |  $$ |$$ |  $$ |    \n$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$\\ \n\\$$$$$$$\\ \\$$$$$$  |$$ |  $$ |\\$$$$$$$ |\\$$$$$$  |$$ |  \\$$$$  |\n \\_______| \\______/ \\__|  \\__| \\_______| \\______/ \\__|   \\____/ \nA multi-network multi-channel IRC relay.\n\n")
         threading.current_thread().name = 'Conduit'
         # setting a base_dir for use in config loading, module loading since relative pathing using getcwd is bad.
         conduit.module_loader.base_dir = os.path.dirname(os.path.abspath( __file__ ))
