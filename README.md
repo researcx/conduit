@@ -64,19 +64,16 @@ mysql -u root -p conduit < servers.sql
 * conduit/cleanup.py - Cleanup service
 * conduit/regextest.py - Temporary script for testing user regex (`regextest.py <nick!username@hostmask>`)
 
-**Instance launcher:**
-* Launches multiple instances based on servers stored in the database.
-* Also runs the cleanup service.
+**How to use:**
+`python conduit/ircbot.py`
 
-`python conduit/run.py`
+**To remove or replace:**
+* conduit/run.py - No longer serves a purpose with the new launcher system
 
 **Cleanup service:**
 * Monitors for which messages have been relayed to all servers and purges them from the database.
 
 `python conduit/cleanup.py`
-
-**Running instances manually:**
-`python conduit/ircbot.py "<id>" "<host>" "<port>" "<nick>" "<#channel>" "<owner>" "<ssl[1/0]>"`
 
 #### COMMANDS:
 
