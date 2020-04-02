@@ -278,7 +278,7 @@ class ConduitMultiplexer():
         logging.info(f'Loading config from {config_path}.')
         self.config = Config(config_path)
         # loading modules
-        logging.info(f"Loading modules from {conduit.module_loader.base_dir}/modules".)
+        logging.info(f"Loading modules from {conduit.module_loader.base_dir}/modules.")
         conduit.module_loader.import_dir("./modules/")
         commands_string = ", ".join(conduit.module_loader.commands.keys)
         logging.info(f"Loaded {len(conduit.module_loader.commands.keys)} modules: {commands_string}."})
