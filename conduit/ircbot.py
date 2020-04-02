@@ -21,7 +21,6 @@ def build_nickless_hostmask(user, host):
 class Conduit(irc.IRCClient):
     logging.debug(f'Conduit called.')
     def __init__(self):
-        self.index = None
         self.server_id = None
         self.config = None
         self.nickname = None
@@ -36,9 +35,32 @@ class Conduit(irc.IRCClient):
 
     def connectionMade(self):
         logging.debug(f'connectionMade called.')
+        
+        # so, my previous attempt of obtaining an index was to create an array assuming that each client would match a config instance,
+        # but the issue with that was that, since if multiple clients were launched to different servers, one could finish before the other,
+        # meaning the socket address and port would've been correct, but the config loaded would not have been since one would finish before the other.
+        # this would've been fine if twisted had let me do it upon __init__, but since connectionMade is when self.factory has a reference, i must overcome it by:
+        # * getting the port and original hostname of the connection
+        # * comparing those against the config itself
+        # * if there's more than one instance of the same hostname:port,
+        # * check it against pre-existing conduits to see if it has been loaded as a config yet
+        # * if it has, select the next available server config
+        # * then break the loop for searching
+        # i question whether self.factory.multiplexer.conduits is needed at all anymore, but... if you want to do an action on all clients, that's still a way to do it (i guess?)
+        self._peer = self.transport.getPeer()
+        self.ip = self._peer.host
+        self.port = self._peer.port
+        self.hostname = self.transport.connector.getDestination()
+        potential_config = None
+        for server in self.factory.multiplexer.config.data["servers"]:
+            if server["endpoint"] == self.hostname and server["port"] == self.port:
+                for conduit_instance in self.factory.multiplexer.conduits:
+                    if server["id"] != conduit_instance.server_id:
+                        potential_config = server
+                        break
+        self.config = potential_config
+
         self.factory.multiplexer.conduits.append(self)
-        self.index = self.factory.multiplexer.conduits.index(self)
-        self.config = self.factory.multiplexer.config.data["servers"][self.index]
         logging.debug(f'config id: ' + str(self.config["id"]))
         self.server_id = self.config["id"]
         logging.debug(f'config server: ' + self.config["name"])
