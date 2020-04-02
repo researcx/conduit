@@ -267,7 +267,7 @@ class ConduitMultiplexer():
         rootLogger = logging.getLogger()
         # remove the default logger.
         rootLogger.handlers = []
-        # hook the logger up to the file "server.log"
+        # hook the logger up to the file "conduit.log" in the data directory.
         fileHandler = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath( __file__ )), "data/conduit.log"))
         fileHandler.setFormatter(logFormatter)
         rootLogger.addHandler(fileHandler)
