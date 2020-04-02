@@ -5,9 +5,8 @@ from conduit.functions import html_escape, splice, spliceNick
 import os, time, sys, re, logging, json, coloredlogs, threading
 
 import conduit.db.connect as Connector
-from conduit.db.users import Users
-from conduit.db.servers import Servers
 from conduit.db.messages import Messages
+from conduit.db.users import Users
 
 import conduit.module_loader
 
@@ -23,14 +22,15 @@ class Conduit(irc.IRCClient):
     logging.debug(f'Conduit called.')
     def __init__(self):
         self.index = None
+        self.server_id = None
         self.config = None
         self.nickname = None
-        self.server_id = None
         self.channels = None
         self.owner = None
         self.blacklist = None
         self.commands = None
         self.command_regex = None
+        self.connect_commands = []
         self.lastMessage = 0
         self.onlineUserList = {}
 
@@ -39,16 +39,20 @@ class Conduit(irc.IRCClient):
         self.factory.multiplexer.conduits.append(self)
         self.index = self.factory.multiplexer.conduits.index(self)
         self.config = self.factory.multiplexer.config.data["servers"][self.index]
-        logging.debug(f'config nick: ' + self.config["nick"])
-        self.nickname = self.config["nick"]
         logging.debug(f'config id: ' + str(self.config["id"]))
         self.server_id = self.config["id"]
+        logging.debug(f'config server: ' + self.config["name"])
+        logging.debug(f'config nick: ' + self.config["nick"])
+        self.nickname = self.config["nick"]
+        logging.debug(f'config username: ' + self.config["user"])
+        self.username = self.config["user"]
         logging.debug(f'config channels: ' + str(self.config["channels"]))
         self.channels = self.config["channels"]
         logging.debug(f'config owner: ' + str(self.config["owner"]))
         self.owner = self.config["owner"]
         logging.debug(f'config blacklist: ' + str(self.config["blacklist"]))
         self.blacklist = self.config["blacklist"]
+        self.connect_commands = self.config["commands"]
         self.commands = self.factory.multiplexer.commands
         logging.debug(f'config commands: ' + str(self.commands))
         for blacklisted_command in self.blacklist:
@@ -72,14 +76,44 @@ class Conduit(irc.IRCClient):
 
     def add_user(self, nick, user, host, channel, rank, online):
         logging.debug(f'add_user called.')
-        checkUsers = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user).filter(Users.host == host).first()
-        if not checkUsers:
-            newUser = Users(server=self.server_id, channel=channel, nick=nick, user=user, host=host, rank=rank, online=online)
-            Connector.session.add(newUser)
+        check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user).filter(Users.host == host).first()
+        if not check_users:
+            new_user = Users(server=self.server_id, channel=channel, nick=nick, user=user, host=host, rank=rank, online=online)
+            Connector.session.add(new_user)
             Connector.session.commit()
             return 1
         else:
             return 0
+
+    def change_rank(self, nick, user, host, channel, rank):
+        logging.debug(f'change_rank called.')
+        check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user).filter(Users.host == host).filter(Users.rank != rank).first()
+        if check_users:
+            check_users.rank = rank
+            Connector.session.commit()
+            return check_users
+        else:
+            return 0
+
+    def check_rank(self, nick, user, host, channel):
+        logging.debug(f'check_rank called.')
+        check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user).filter(Users.host == host).first()
+        if check_users:
+            logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
+            if check_users.rank < 10:
+                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from halfop")
+                self.mode(channel, False, 'h', limit=None, user=nick, mask=None)
+            if check_users.rank < 100:
+                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from op")
+                self.mode(channel, False, 'o', limit=None, user=nick, mask=None)
+            if check_users.rank >= 10:
+                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to halfop")
+                self.mode(channel, True, 'h', limit=None, user=nick, mask=None)
+            if check_users.rank >= 100:
+                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to op")
+                self.mode(channel, True, 'o', limit=None, user=nick, mask=None)
+        return 0
+
 
     def check_status(self, channel):
         logging.debug(f'check_status called.')
@@ -102,10 +136,17 @@ class Conduit(irc.IRCClient):
 
     def signedOn(self):
         logging.debug(f'signedOn called.')
+        for connect_command in self.connect_commands:
+            logging.debug(f'called command: ' + connect_command)
+            self.sendLine(connect_command)
         for channel in self.channels:
             self.onlineUserList[channel] = []
             self.join(channel)
             logging.debug(self.onlineUserList[channel])
+
+    def userJoined(self, user, channel):
+        userRegex = re.findall(re_user,  user)
+        self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel)
 
     def joined(self, channel):
         logging.debug(f'joined called.')
@@ -158,7 +199,7 @@ class Conduit(irc.IRCClient):
         who_user = nargs[1][2]
         who_host = nargs[1][3]
         who_channel = nargs[1][1]
-
+        who_modes = nargs[1][6]
         # print(build_hostmask(who_nick, who_user, who_host))
         # print(build_nickless_hostmask(who_user, who_host))
         

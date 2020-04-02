@@ -20,15 +20,15 @@ Remembers all invited users with a rank which the bots will automatically promot
    - [x] Invite system
    - [x] User list (90%)
    - [ ] User Profiles (!info `<user>`)
-   - [ ] Automatic rank promotion
+   - [x] Automatic rank promotion
    - [ ] Registration
-   - [ ] Change rank commands (!ban `<user>`, !promote `<user>`, !demote `<user>`, !setrank `<user>` `<rank>`)
+   - [ ] Change rank commands (!ban `<user>`, !rank `<user>` `<rank>`)
  - [x] Multiple channel support (untested)
  - [x] Server connection (90%)
    - [x] SSL support
-   - [ ] Automatically run commands on connect/reconnect
-   - [ ] More than one bot owner
-   - [ ] Autojoin more than one channel
+   - [x] Automatically run commands on connect/reconnect
+   - [ ] More than one bot owner (untested)
+   - [ ] Autojoin more than one channel (untested)
    - [x] Store servers in a configuration file.
  - [ ] Have conduit create its own sqlite database.
  - [ ] Python version check to make sure >3.x is being used.

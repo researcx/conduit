@@ -2,8 +2,6 @@ import conduit.module_loader
 
 import conduit.db.connect as Connector
 from conduit.db.users import Users
-from conduit.db.servers import Servers
-from conduit.db.messages import Messages
 
 from conduit.functions import spliceNick
 
@@ -12,8 +10,6 @@ import logging
 
 @conduit.module_loader.add_command("users")
 def user_list(data, server):
-    print(data)
-    print(server)
     logging.debug(f'user_list called.')
     users = Connector.session.query(Users).filter(Users.online == 1).all()
     logging.debug(f'user_list users query called.')
