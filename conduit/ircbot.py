@@ -234,13 +234,11 @@ class Conduit(irc.IRCClient):
         self.check_status(nargs[1][1])
 
 class ConduitFactory(protocol.ReconnectingClientFactory):
-    logging.debug(f'ConduitFactory called.')
     def __init__(self, multiplexer):
         self.multiplexer = multiplexer
         self.protocol = Conduit
 
 class Config(object):
-    logging.debug(f'Config called.')
     def __init__(self, path):
         try:
             with open(path) as config_file:
@@ -251,51 +249,53 @@ class Config(object):
             logging.info(f"Successfully loaded the config from {path}.")
 
 class ConduitMultiplexer():
-    logging.debug(f'ConduitMultiplexer called.')
     def __init__(self):
-        logging.debug(f'ConduitMultiplexer __init__.')
         self.conduits = []
         self.config = None
         self.commands = None
 
     def start(self):
-        logging.debug(f'ConduitMultiplexer start.')
-        self.config = Config(os.path.dirname(os.path.abspath( __file__ )) + "/data/bot.cfg")
+        # intro
+        print("                                    $$\\           $$\\   $$\\\n                                    $$ |          \\__|  $$ |    \n $$$$$$$\\  $$$$$$\\  $$$$$$$\\   $$$$$$$ |$$\\   $$\\ $$\\ $$$$$$\\\n   $$  _____|$$  __$$\\ $$  __$$\\ $$  __$$ |$$ |  $$ |$$ |\\_$$  _|  \n$$ /      $$ /  $$ |$$ |  $$ |$$ /  $$ |$$ |  $$ |$$ |  $$ |    \n$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$\\ \n\\$$$$$$$\\ \\$$$$$$  |$$ |  $$ |\\$$$$$$$ |\\$$$$$$  |$$ |  \\$$$$  |\n \\_______| \\______/ \\__|  \\__| \\_______| \\______/ \\__|   \\____/ \nA multi-network multi-channel IRC relay.\n\n")
+        threading.current_thread().name = 'Conduit'
+        # setting a base_dir for use in config loading, module loading since relative pathing using getcwd is bad.
         conduit.module_loader.base_dir = os.path.dirname(os.path.abspath( __file__ ))
+        logging.info(f"Registered base directory as {conduit.module_loader.base_dir}.")
+        # sets up a debug level logger that overwrites the file
+        logging.basicConfig(level=logging.DEBUG,filemode="w")
+        logFormatter = logging.Formatter("[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s", "%Y-%m-%d %H:%M:%S")
+        rootLogger = logging.getLogger()
+        # remove the default logger.
+        rootLogger.handlers = []
+        # hook the logger up to the file "server.log"
+        fileHandler = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath( __file__ )), "data/conduit.log"))
+        fileHandler.setFormatter(logFormatter)
+        rootLogger.addHandler(fileHandler)
+        # hook the logger up to the console
+        coloredlogs.install(level='DEBUG',fmt="[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s")
+        # loading config
+        config_path = conduit.module_loader.base_dir + "/data/bot.cfg"
+        logging.info(f'Loading config from {config_path}.')
+        self.config = Config(config_path)
+        # loading modules
+        logging.info(f"Loading modules from {conduit.module_loader.base_dir}/modules".)
         conduit.module_loader.import_dir("./modules/")
+        commands_string = ", ".join(conduit.module_loader.commands.keys)
+        logging.info(f"Loaded {len(conduit.module_loader.commands.keys)} modules: {commands_string}."})
         self.commands = conduit.module_loader.commands
+        # beginning connections
+        logging.info("Creating reactor connections.")
         f = ConduitFactory(self)
         for server in self.config.data["servers"]:
             security_str = "secure" if server["secure"] else "insecure"
             logging.info(f'Attempting {security_str} connection to {server["endpoint"]}:{server["port"]}.')
             if server["secure"]:
-                logging.debug(f'Connecting with SSL.')
                 reactor.connectSSL(server["endpoint"], server["port"], f, ssl.ClientContextFactory())
             else:
-                logging.debug(f'Connecting with TCP.')
                 reactor.connectTCP(server["endpoint"], server["port"], f)
-        logging.debug(f'Running reactor.')
+        logging.info(f'Running reactor.')
         reactor.run()
 
-
-def main():
-    # intro
-    print("                                    $$\\           $$\\   $$\\\n                                    $$ |          \\__|  $$ |    \n $$$$$$$\\  $$$$$$\\  $$$$$$$\\   $$$$$$$ |$$\\   $$\\ $$\\ $$$$$$\\\n   $$  _____|$$  __$$\\ $$  __$$\\ $$  __$$ |$$ |  $$ |$$ |\\_$$  _|  \n$$ /      $$ /  $$ |$$ |  $$ |$$ /  $$ |$$ |  $$ |$$ |  $$ |    \n$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$ |  $$ |$$\\ \n\\$$$$$$$\\ \\$$$$$$  |$$ |  $$ |\\$$$$$$$ |\\$$$$$$  |$$ |  \\$$$$  |\n \\_______| \\______/ \\__|  \\__| \\_______| \\______/ \\__|   \\____/ \n\n")
-    threading.current_thread().name = 'Conduit'
-    # Sets up a debug level logger that overwrites the file
-    logging.basicConfig(level=logging.DEBUG,filemode="w")
-    logFormatter = logging.Formatter("[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s", "%Y-%m-%d %H:%M:%S")
-    rootLogger = logging.getLogger()
-    # Remove the default logger.
-    rootLogger.handlers = []
-    # Hook the logger up to the file "server.log"
-    fileHandler = logging.FileHandler(os.path.join(os.path.dirname(os.path.abspath( __file__ )), "data/conduit.log"))
-    fileHandler.setFormatter(logFormatter)
-    rootLogger.addHandler(fileHandler)
-    # Hook the logger up to the console
-    coloredlogs.install(level='DEBUG',fmt="[%(asctime)s - %(levelname)s] [%(filename)s:%(lineno)s - %(funcName)s() - %(threadName)s] %(message)s")
+if __name__ == "":
     conduitmx = ConduitMultiplexer()
     conduitmx.start()
-
-if __name__ == "":
-    main()
