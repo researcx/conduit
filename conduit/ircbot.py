@@ -296,6 +296,6 @@ class ConduitMultiplexer():
         logging.info(f'Running reactor.')
         reactor.run()
 
-if __name__ == "":
+if __name__ == "__main__":
     conduitmx = ConduitMultiplexer()
     conduitmx.start()
