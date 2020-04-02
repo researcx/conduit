@@ -281,7 +281,7 @@ class ConduitMultiplexer():
         logging.info(f"Loading modules from {conduit.module_loader.base_dir}/modules.")
         conduit.module_loader.import_dir("./modules/")
         commands_string = ", ".join(conduit.module_loader.commands.keys)
-        logging.info(f"Loaded {len(conduit.module_loader.commands.keys)} modules: {commands_string}."})
+        logging.info(f"Loaded {len(conduit.module_loader.commands.keys)} modules: {commands_string}.")
         self.commands = conduit.module_loader.commands
         # beginning connections
         logging.info("Creating reactor connections.")
