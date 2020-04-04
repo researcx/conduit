@@ -1,5 +1,6 @@
 #Logs
-server.log
+conduit/data/conduit.log
+conduit/server.log
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

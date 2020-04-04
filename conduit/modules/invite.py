@@ -11,7 +11,6 @@ import logging, re
 def invite_user(data, server):
     logging.debug(f'invite_user called.')
     msg = data[2].split(" ")
-    isCommand = 1
     rank = 1
     rank_name = "user"
     if ((msg[2] == "halfop") or (int(msg[2]) == 10)):

@@ -11,7 +11,6 @@ import logging, re
 def rank_user(data, server):
     logging.debug(f'rank_user called.')
     msg = data[2].split(" ")
-    isCommand = 1
     rank = 1
     rank_name = "user"
     rank_mode = ""

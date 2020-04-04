@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol, task, ssl
-from conduit.functions import html_escape, splice, spliceNick, build_hostmask, build_nickless_hostmask
+from conduit.functions import html_escape, splice, spliceNick, build_hostmask, build_nickless_hostmask, re_user
 import os, time, sys, re, logging, json, coloredlogs, threading
 
 import conduit.db.connect as Connector
@@ -42,21 +42,28 @@ class Conduit(irc.IRCClient):
         self._peer = self.transport.getPeer()
         self.ip = self._peer.host
         self.port = self._peer.port
-        self.hostname = self.transport.connector.getDestination()
+        self.hostname = self.transport.connector.getDestination().host
+        logging.debug(self.hostname)
+        logging.debug(self.ip)
         potential_config = None
         for server in self.factory.multiplexer.config.data["servers"]:
             if server["endpoint"] == self.hostname and server["port"] == self.port:
-                for conduit_instance in self.factory.multiplexer.conduits:
-                    if server["id"] != conduit_instance.server_id:
-                        potential_config = server
-                        break
+                if len(self.factory.multiplexer.conduits):
+                    for conduit_instance in self.factory.multiplexer.conduits:
+                        if server["id"] != conduit_instance.server_id:
+                            potential_config = server
+                            break
+                else:
+                    potential_config = server
+                    break
         self.config = potential_config
 
         self.factory.multiplexer.conduits.append(self)
-        logging.debug(f'config id: ' + str(self.config["id"]))
+        logging.debug(f'config server_id: ' + str(self.config["id"]))
         self.server_id = self.config["id"]
-        logging.debug(f'config server: ' + self.config["name"])
-        logging.debug(f'config nick: ' + self.config["nick"])
+        logging.debug(f'config server_name: ' + self.config["name"])
+        self.server_name = self.config["name"]
+        logging.debug(f'config nickname: ' + self.config["nick"])
         self.nickname = self.config["nick"]
         logging.debug(f'config username: ' + self.config["user"])
         self.username = self.config["user"]
@@ -114,30 +121,34 @@ class Conduit(irc.IRCClient):
         check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user).filter(Users.host == host).first()
         if check_users:
             logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
+            if check_users.rank == 0:
+                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", kicking")
+                self.kick(channel, nick, reason="rank too low to access this channel")
             if check_users.rank < 10:
                 logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from halfop")
                 self.mode(channel, False, 'h', limit=None, user=nick, mask=None)
             if check_users.rank < 100:
                 logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from op")
                 self.mode(channel, False, 'o', limit=None, user=nick, mask=None)
-            if check_users.rank >= 10:
+            if check_users.rank == 10:
                 logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to halfop")
                 self.mode(channel, True, 'h', limit=None, user=nick, mask=None)
-            if check_users.rank >= 100:
+            if check_users.rank == 100:
                 logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to op")
                 self.mode(channel, True, 'o', limit=None, user=nick, mask=None)
         return 0
 
-
     def check_status(self, channel):
         logging.debug(f'check_status called.')
-        onlineUsers = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.channel == channel).filter(Users.server == self.server_id).all()
+        onlineUsers = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.server == self.server_id).all()
         for user in onlineUsers:
             userMask = build_nickless_hostmask(user.user, user.host)
             if userMask in self.onlineUserList[channel]:
+                logging.debug(f'setting ' + userMask + ' online')
                 user.online = 1
                 Connector.session.commit()
             else:
+                logging.debug(f'setting ' + userMask + ' offline')
                 user.online = 0
                 Connector.session.commit()
 
@@ -148,6 +159,48 @@ class Conduit(irc.IRCClient):
                 return serverDict
         return "?"
 
+    def irc_JOIN(self, prefix, params):
+        logging.debug(f'irc_JOIN called.')
+        nick = prefix.split('!')[0]
+        channel = params[-1]
+        if nick == self.nickname:
+            self.joined(channel)
+        else:
+            userRegex = re.findall(re_user,  prefix)
+            if userRegex:
+                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel)
+                check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == userRegex[0][1]).filter(Users.host == userRegex[0][2]).first()
+                if check_users:
+                    logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
+                    if check_users.rank >= 1:                    
+                        self.commands["users"]((prefix, channel, ""), self)
+                        self.save_message(prefix, channel, "", "JOIN")
+
+    def irc_PART(self, prefix, params):
+        """
+        Called when a user leaves a channel.
+        """
+        nick = prefix.split('!')[0]
+        channel = params[0]
+        if nick == self.nickname:
+            self.left(channel)
+        else:
+            userRegex = re.findall(re_user,  prefix)
+            if userRegex:
+                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel)
+                self.save_message(prefix, channel, "", "PART")
+
+    def irc_QUIT(self, prefix, params):
+        """
+        Called when a user has quit.
+        """
+        nick = prefix.split('!')[0]
+        userRegex = re.findall(re_user,  prefix)
+        if userRegex:
+            self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], params[0])
+            self.save_message(prefix, params[0], "", "QUIT")
+        self.userQuit(nick, params[0])
+
     def signedOn(self):
         logging.debug(f'signedOn called.')
         for connect_command in self.connect_commands:
@@ -157,10 +210,6 @@ class Conduit(irc.IRCClient):
             self.onlineUserList[channel] = []
             self.join(channel)
             logging.debug(self.onlineUserList[channel])
-
-    def userJoined(self, user, channel):
-        userRegex = re.findall(re_user,  user)
-        self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel)
 
     def joined(self, channel):
         logging.debug(f'joined called.')
@@ -198,11 +247,20 @@ class Conduit(irc.IRCClient):
         for message in messages:
             sent =  [int(i) for i in message.sent.split(";") if i]
             if self.server_id not in sent:
+                logging.debug(f'unsent message found!.')
                 sender = message.sender.split("!")[0]
                 if message.type == "ACTION":
+                    logging.debug(f'message.type is ACTION.')
                     self.msg(message.channel,  spliceNick(sender) + " " + message.message)
-                else:
+                if message.type == "PRIVMSG":
+                    logging.debug(f'message.type is PRIVMSG.')
                     self.msg(message.channel, "<" + spliceNick(sender) + "> " + message.message)
+                if message.type == "JOIN":
+                    logging.debug(f'message.type is JOIN.')
+                    self.msg(message.channel,  spliceNick(sender) + " has joined " + message.channel + " on " + self.get_server(message.server)["name"])
+                if message.type == "PART":
+                    logging.debug(f'message.type is PART.')
+                    self.msg(message.channel,  spliceNick(sender) + " has left " + message.channel + " on " + self.get_server(message.server)["name"])
                 message.sent = message.sent + str(self.server_id) + ";"
                 Connector.session.commit()
 
@@ -227,7 +285,7 @@ class Conduit(irc.IRCClient):
         logging.debug(f"comparing " + who_nick + " to " + self.nickname)
         if who_nick != self.nickname:
             logging.debug(who_nick + " is not " + self.nickname)
-            self.add_user(who_nick, who_user, who_host, who_channel, 0, 1)
+            self.add_user(who_nick, who_user, who_host, who_channel, 1, 1)
 
     def irc_RPL_ENDOFWHO(self, *nargs):
         logging.debug(f'irc_RPL_ENDOFWHO called.')
@@ -280,8 +338,8 @@ class ConduitMultiplexer():
         # loading modules
         logging.info(f"Loading modules from {conduit.module_loader.base_dir}/modules.")
         conduit.module_loader.import_dir("./modules/")
-        commands_string = ", ".join(conduit.module_loader.commands.keys)
-        logging.info(f"Loaded {len(conduit.module_loader.commands.keys)} modules: {commands_string}.")
+        commands_string = ", ".join(iter(conduit.module_loader.commands.keys()))
+        logging.info(f"Loaded {len(conduit.module_loader.commands.keys())} modules: {commands_string}.")
         self.commands = conduit.module_loader.commands
         # beginning connections
         logging.info("Creating reactor connections.")

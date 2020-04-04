@@ -7,28 +7,35 @@ Records users on every configured channel on every configured network.
 Remembers all invited users with a rank which the bots will automatically promote them to.
 
 #### FEATURES & ROADMAP:
- - [x] Server -> Server
-     - [x] Messages (PRIVMSG) (100%)
-     - [x] Actions (ACTION) (100%)
+ - [x] Server <-> Server
+     - [x] Messages (PRIVMSG)
+     - [x] Actions (ACTION)
+     - [x] Joins (JOIN)
+     - [x] Parts (PART)
+     - [ ] Kicks (KICK)
+     - [ ] Quits (QUIT)
      - [ ] Private Messages
- - [ ] Notifications
-    - [ ] Join/part (x has joined #x on x, x has left #x on x)
-    - [ ] List all users on the channel to newly joined person
- - [ ] Security
-    - [ ] Prevent impersonation
- - [x] User system (90%)
+ - [x] Notifications
+    - [x] Join/leave notifications
+    - [x] List all users on the channel to newly joined person
+ - [x] User system
    - [x] Invite system
-   - [x] User list (90%)
+   - [x] User list
    - [ ] User Profiles (!info `<user>`)
-   - [x] Automatic rank promotion
-   - [ ] Registration
-   - [ ] Change rank commands (!ban `<user>`, !rank `<user>` `<rank>`)
- - [x] Multiple channel support (untested)
- - [x] Server connection (90%)
+   - [x] Automatic rank promotion/demotion
+   - [ ] Manual registration
+   - [x] Change rank commands (!disable `<user>`, !rank `<user>` `<rank>`)
+ - [x] Security
+    - [ ] Prevent impersonation
+    - [x] Automatically kick users that are disabled
+    - [x] Temporarily ban disabled users if attempting to join too often
+    - [ ] Improve/clean up rank checking system.
+ - [x] Multiple channel supportt
+ - [x] Server connection
    - [x] SSL support
-   - [x] Automatically run commands on connect/reconnect
+   - [x] Automatically run custom commands on connect/reconnect
    - [ ] More than one bot owner (untested)
-   - [ ] Autojoin more than one channel (untested)
+   - [x] Autojoin more than one channel
    - [x] Store servers in a configuration file.
  - [ ] Have conduit create its own sqlite database.
  - [ ] Python version check to make sure >3.x is being used.
@@ -78,18 +85,22 @@ mysql -u root -p conduit < servers.sql
 #### COMMANDS:
 
 ```
-- Invite 
+- Invite User
 Access: bot owner(s)
 Command: !invite <nick!username@hostmask> <rank> <network>
 Ranks: 0 (banned), 1 (member), 10 (halfop), 100 (op)
 
-- Join 
+- Join Channel
 Access: users with a rank above 0
 Command: !join <channel>
 
-- Users 
+- User List
 Access: users with a rank above 0
-Command: !users <channel>
+Command: !users
+
+- Set Rank 
+Access: users with a rank above 100
+Command: !rank <user> <rank>
 ```
 
 #### EXAMPLE USECASE
