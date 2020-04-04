@@ -28,11 +28,11 @@ A multi-network multi-channel IRC relay.
    - [x] Automatic rank promotion/demotion
    - [ ] Manual registration
    - [x] Change rank commands (!disable `<user>`, !rank `<user>` `<rank>`)
-   - [x] Rank checking for running commands (if isOwner == 1 or rank >= 1000)
+   - [ ] Rank checking for running commands (if isOwner == 1 or rank >= 1000)
  - [x] Security
     - [ ] Prevent impersonation
     - [x] Automatically kick users that are disabled
-    - [x] Temporarily ban disabled users if attempting to join too often
+    - [ ] Temporarily ban disabled users if attempting to join too often
     - [ ] Improve/clean up rank checking system
     - [ ] Fakelag to prevent message/command flood
  - [x] Multiple channel support
@@ -43,7 +43,7 @@ A multi-network multi-channel IRC relay.
    - [ ] Give bot owners rank 1000
    - [x] Autojoin more than one channel
    - [x] Store servers in a configuration file
-   - [x] Cleanup process to be automatically ran with the bot
+   - [ ] Cleanup process to be automatically ran with the bot
  - [ ] Have conduit create its own sqlite database
  - [ ] Python version check to make sure >3.x is being used
 
