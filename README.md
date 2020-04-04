@@ -2,9 +2,12 @@
 
 A multi-network multi-channel IRC relay.
 
-Allows you to configure more than two networks with more than two channels for messages to be relayed between.
-Records users on every configured channel on every configured network.
-Remembers all invited users with a rank which the bots will automatically promote them to.
+* Allows you to configure more than two networks with more than two channels for messages to be relayed between.
+* Records users on every configured channel on every configured network.
+* Remembers all invited users with a rank which the bots will automatically attempt to promote them to.
+* Provides useful commands for administrators to manage their linked servers with.
+
+**Warning:** Experimental software.
 
 #### FEATURES & ROADMAP:
  - [x] Server <-> Server
@@ -25,23 +28,27 @@ Remembers all invited users with a rank which the bots will automatically promot
    - [x] Automatic rank promotion/demotion
    - [ ] Manual registration
    - [x] Change rank commands (!disable `<user>`, !rank `<user>` `<rank>`)
+   - [x] Rank checking for running commands (if isOwner == 1 or rank >= 1000)
  - [x] Security
     - [ ] Prevent impersonation
     - [x] Automatically kick users that are disabled
     - [x] Temporarily ban disabled users if attempting to join too often
-    - [ ] Improve/clean up rank checking system.
- - [x] Multiple channel supportt
+    - [ ] Improve/clean up rank checking system
+    - [ ] Fakelag to prevent message/command flood
+ - [x] Multiple channel support
  - [x] Server connection
    - [x] SSL support
    - [x] Automatically run custom commands on connect/reconnect
    - [ ] More than one bot owner (untested)
+   - [ ] Give bot owners rank 1000
    - [x] Autojoin more than one channel
-   - [x] Store servers in a configuration file.
- - [ ] Have conduit create its own sqlite database.
- - [ ] Python version check to make sure >3.x is being used.
+   - [x] Store servers in a configuration file
+   - [x] Cleanup process to be automatically ran with the bot
+ - [ ] Have conduit create its own sqlite database
+ - [ ] Python version check to make sure >3.x is being used
 
 #### RUNNING/DEVELOPING:
-**Requirements:** python3
+**Requirements:** python3, mysql server
 *Make sure that python3 is being used when launching via pip or python!*
 ```
 python --version
@@ -49,47 +56,30 @@ pip --version
 ```
 *If these report python 2.x, substitute pip for pip3 and python for python3 in the following commands.*
 
-**Installing:**
+**Installation:**
 ```
 git clone https://github.com/unendingPattern/conduit-staging.git
 cd conduit-staging
 pip install -e .
 ```
 
-**MySQL Database:**
+**Setting up the MySQL Database:**
 
 ```
 mysql -u root -p conduit < conduit.sql
-mysql -u root -p conduit < servers.sql
 ```
 
-**Files:**
-* condit/db/*.py - Database connectors
-* conduit/functions.py - Helper functions
-* conduit/ircbot.py - IRC bot
-* conduit/run.py - Instance launcher
-* conduit/cleanup.py - Cleanup service
-* conduit/regextest.py - Temporary script for testing user regex (`regextest.py <nick!username@hostmask>`)
+**Usage:**
+Edit `conduit/data/bot.cfg`
+Run `python conduit/ircbot.py`
 
-**How to use:**
-`python conduit/ircbot.py`
-
-**To remove or replace:**
-* conduit/run.py - No longer serves a purpose with the new launcher system
-
-**Cleanup service:**
-* Monitors for which messages have been relayed to all servers and purges them from the database.
-
-`python conduit/cleanup.py`
+#### RANKS:
+```
+0 (banned), 1 (member), 10 (halfop), 100 (op), 1000 (admin)
+```
 
 #### COMMANDS:
-
 ```
-- Invite User
-Access: bot owner(s)
-Command: !invite <nick!username@hostmask> <rank> <network>
-Ranks: 0 (banned), 1 (member), 10 (halfop), 100 (op)
-
 - Join Channel
 Access: users with a rank above 0
 Command: !join <channel>
@@ -98,28 +88,36 @@ Command: !join <channel>
 Access: users with a rank above 0
 Command: !users
 
+- Invite User
+Access: users with a rank of 1000 (admins)
+Command: !invite <nick!username@hostmask> <rank>
+
 - Set Rank 
-Access: users with a rank above 100
+Access: users with a rank of 1000 (admins)
 Command: !rank <user> <rank>
+
+- Disable
+Access: users with a of 1000 (admins)
+Command: !disable <user>
 ```
 
 #### EXAMPLE USECASE
 ```
 
-       [DISCORD APPSERVICE]  <->  [MATRIX]  <-> [IRC APPSERVICE]
-                                                      ^
-                                                      |
-                                                      v
-                                      Rizon  <-> [LOCAL IRC] <-> Freenode
-                                                      ^
-                                                      |
-                                                      v
-                                                  Gamesurge
+[DISCORD APPSERVICE]  <->  Matrix Server  <-> [IRC APPSERVICE]
+        ^                                            ^
+        |                                            |
+        v                                            v
+  Discord Server                      Rizon  <->  LocalIRC <-> Freenode
+                                                     ^
+                                                     |
+                                                     v
+                                                 GameSurge
                                                   
 Status: Working and tested.
 Conclusion:
-* Minor bugs and missing features.
 * Functional for daily usage on a private/moderated net.
+* Experimental software.
 
 ```
 
