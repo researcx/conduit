@@ -28,6 +28,7 @@ A multi-network multi-channel IRC relay.
    - [x] Automatic rank promotion/demotion
    - [ ] Manual registration
    - [x] Change rank commands (!disable `<user>`, !rank `<user>` `<rank>`)
+   - [ ] Join command (implemented but currently not working)
    - [ ] Rank checking for running commands (if isOwner == 1 or rank >= 1000)
  - [x] Security
     - [ ] Prevent impersonation
@@ -70,7 +71,9 @@ mysql -u root -p conduit < conduit.sql
 ```
 
 **Usage:**
+
 Edit `conduit/data/bot.cfg`
+
 Run `python conduit/ircbot.py`
 
 #### RANKS:
@@ -81,24 +84,34 @@ Run `python conduit/ircbot.py`
 #### COMMANDS:
 ```
 - Join Channel
+Private messaging the bot with this has the bot invite you to the channel.
 Access: users with a rank above 0
 Command: !join <channel>
 
 - User List
+Lists all users in the current channel on every configured network.
 Access: users with a rank above 0
 Command: !users
 
 - Invite User
+Invites a user to the current channel.
 Access: users with a rank of 1000 (admins)
 Command: !invite <nick!username@hostmask> <rank>
 
-- Set Rank 
+- Set Rank
+Sets a user rank for the current channel.
 Access: users with a rank of 1000 (admins)
 Command: !rank <user> <rank>
 
 - Disable
-Access: users with a of 1000 (admins)
+Disables a user by setting their rank to 0 in the current channel.
+Access: users with a rank of 1000 (admins)
 Command: !disable <user>
+
+- Enable
+Enables a user by setting their rank to 1 in the current channel.
+Access: users with a rank of 1000 (admins)
+Command: !enable <user>
 ```
 
 #### EXAMPLE USECASE

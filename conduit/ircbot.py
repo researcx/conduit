@@ -116,26 +116,28 @@ class Conduit(irc.IRCClient):
         else:
             return 0
 
-    def check_rank(self, nick, user, host, channel):
+    def check_rank(self, nick, user, host, channel, promote):
         logging.debug(f'check_rank called.')
         check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user).filter(Users.host == host).first()
         if check_users:
             logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
-            if check_users.rank == 0:
-                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", kicking")
-                self.kick(channel, nick, reason="rank too low to access this channel")
-            if check_users.rank < 10:
-                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from halfop")
-                self.mode(channel, False, 'h', limit=None, user=nick, mask=None)
-            if check_users.rank < 100:
-                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from op")
-                self.mode(channel, False, 'o', limit=None, user=nick, mask=None)
-            if check_users.rank == 10:
-                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to halfop")
-                self.mode(channel, True, 'h', limit=None, user=nick, mask=None)
-            if check_users.rank == 100:
-                logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to op")
-                self.mode(channel, True, 'o', limit=None, user=nick, mask=None)
+            if promote:
+                if check_users.rank == 0:
+                    logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", kicking")
+                    self.kick(channel, nick, reason="rank too low to access this channel")
+                if check_users.rank < 10:
+                    logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from halfop")
+                    self.mode(channel, False, 'h', limit=None, user=nick, mask=None)
+                if check_users.rank < 100:
+                    logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from op")
+                    self.mode(channel, False, 'o', limit=None, user=nick, mask=None)
+                if check_users.rank == 10:
+                    logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to halfop")
+                    self.mode(channel, True, 'h', limit=None, user=nick, mask=None)
+                if check_users.rank == 100:
+                    logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", promoting to op")
+                    self.mode(channel, True, 'o', limit=None, user=nick, mask=None)
+            return check_users.rank
         return 0
 
     def check_status(self, channel):
@@ -168,7 +170,7 @@ class Conduit(irc.IRCClient):
         else:
             userRegex = re.findall(re_user,  prefix)
             if userRegex:
-                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel)
+                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, 1)
                 check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == userRegex[0][1]).filter(Users.host == userRegex[0][2]).first()
                 if check_users:
                     logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
@@ -187,7 +189,7 @@ class Conduit(irc.IRCClient):
         else:
             userRegex = re.findall(re_user,  prefix)
             if userRegex:
-                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel)
+                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, 0)
                 self.save_message(prefix, channel, "", "PART")
 
     def irc_QUIT(self, prefix, params):
@@ -197,7 +199,7 @@ class Conduit(irc.IRCClient):
         nick = prefix.split('!')[0]
         userRegex = re.findall(re_user,  prefix)
         if userRegex:
-            self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], params[0])
+            self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], params[0], 0)
             self.save_message(prefix, params[0], "", "QUIT")
         self.userQuit(nick, params[0])
 
@@ -249,6 +251,8 @@ class Conduit(irc.IRCClient):
             if self.server_id not in sent:
                 logging.debug(f'unsent message found!.')
                 sender = message.sender.split("!")[0]
+                if "Discord[m]" in sender: # matrix-appservice-discord with nickPattern configured to ":nick (Discord)"
+                    sender = sender.replace("Discord[m]", "[d]")
                 if message.type == "ACTION":
                     logging.debug(f'message.type is ACTION.')
                     self.msg(message.channel,  spliceNick(sender) + " " + message.message)
