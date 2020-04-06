@@ -24,6 +24,7 @@ class Conduit(irc.IRCClient):
         self.connect_commands = []
         self.lastMessage = 0
         self.onlineUserList = {}
+        self.nicksToIgnore = ["ChanServ"]
 
     def connectionMade(self):
         logging.debug(f'connectionMade called.')
@@ -128,7 +129,7 @@ class Conduit(irc.IRCClient):
                 if check_users.rank < 10:
                     logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from halfop")
                     self.mode(channel, False, 'h', limit=None, user=nick, mask=None)
-                if check_users.rank < 100:
+                else if check_users.rank < 100:
                     logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from op")
                     self.mode(channel, False, 'o', limit=None, user=nick, mask=None)
                 if check_users.rank == 10:
@@ -154,12 +155,20 @@ class Conduit(irc.IRCClient):
                 user.online = 0
                 Connector.session.commit()
 
+    def update_status(self, nick, user, host, channel, status):
+        logging.debug(f'update_status called.')
+        onlineUsers = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.users == user).filter(Users.host == host).first()
+        if onlineUsers:
+            logging.debug(f'setting ' + userMask + ' status to ' + status)
+            user.online = status
+            Connector.session.commit()
+
     def get_server(self, server_id):
         logging.debug(f'get_server called.')
         for serverDict in self.factory.multiplexer.config.data["servers"]:
             if serverDict["id"] == server_id:
                 return serverDict
-        return "?"
+        return 0
 
     def irc_JOIN(self, prefix, params):
         logging.debug(f'irc_JOIN called.')
@@ -170,6 +179,7 @@ class Conduit(irc.IRCClient):
         else:
             userRegex = re.findall(re_user,  prefix)
             if userRegex:
+                self.add_user(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, 1, 1)
                 self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, 1)
                 check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == userRegex[0][1]).filter(Users.host == userRegex[0][2]).first()
                 if check_users:
@@ -179,9 +189,6 @@ class Conduit(irc.IRCClient):
                         self.save_message(prefix, channel, "", "JOIN")
 
     def irc_PART(self, prefix, params):
-        """
-        Called when a user leaves a channel.
-        """
         nick = prefix.split('!')[0]
         channel = params[0]
         if nick == self.nickname:
@@ -193,9 +200,6 @@ class Conduit(irc.IRCClient):
                 self.save_message(prefix, channel, "", "PART")
 
     def irc_QUIT(self, prefix, params):
-        """
-        Called when a user has quit.
-        """
         nick = prefix.split('!')[0]
         userRegex = re.findall(re_user,  prefix)
         if userRegex:
@@ -212,12 +216,13 @@ class Conduit(irc.IRCClient):
             self.onlineUserList[channel] = []
             self.join(channel)
             logging.debug(self.onlineUserList[channel])
+        self.nicksToIgnore.append(self.nickname)
+        l = task.LoopingCall(self.check_messages)
+        l.start(1)
 
     def joined(self, channel):
         logging.debug(f'joined called.')
         self.who(channel)
-        l = task.LoopingCall(self.check_messages)
-        l.start(1)
 
     def privmsg(self, user, channel, message):
         logging.debug(f'privmsg called.')
@@ -255,14 +260,14 @@ class Conduit(irc.IRCClient):
                     sender = sender.replace("Discord[m]", "[d]")
                 if message.type == "ACTION":
                     logging.debug(f'message.type is ACTION.')
-                    self.msg(message.channel,  spliceNick(sender) + " " + message.message)
+                    self.msg(message.channel,  "* " + spliceNick(sender) + " " + message.message)
                 if message.type == "PRIVMSG":
                     logging.debug(f'message.type is PRIVMSG.')
                     self.msg(message.channel, "<" + spliceNick(sender) + "> " + message.message)
-                if message.type == "JOIN":
+                if (message.type == "JOIN") and (self.get_server(message.server)):
                     logging.debug(f'message.type is JOIN.')
                     self.msg(message.channel,  spliceNick(sender) + " has joined " + message.channel + " on " + self.get_server(message.server)["name"])
-                if message.type == "PART":
+                if (message.type == "PART") and (self.get_server(message.server)):
                     logging.debug(f'message.type is PART.')
                     self.msg(message.channel,  spliceNick(sender) + " has left " + message.channel + " on " + self.get_server(message.server)["name"])
                 message.sent = message.sent + str(self.server_id) + ";"
@@ -285,10 +290,10 @@ class Conduit(irc.IRCClient):
         else:
             self.onlineUserList[who_channel] = [build_nickless_hostmask(who_user, who_host)]
             logging.debug(self.onlineUserList[who_channel])
- 
-        logging.debug(f"comparing " + who_nick + " to " + self.nickname)
-        if who_nick != self.nickname:
-            logging.debug(who_nick + " is not " + self.nickname)
+
+        logging.debug(f"comparing " + who_nick + " to " + str(self.nicksToIgnore))
+        if who_nick not in self.nicksToIgnore:
+            logging.debug(who_nick + " is not in " + str(self.nicksToIgnore))
             self.add_user(who_nick, who_user, who_host, who_channel, 1, 1)
 
     def irc_RPL_ENDOFWHO(self, *nargs):

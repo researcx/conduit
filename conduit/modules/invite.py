@@ -33,7 +33,6 @@ def join_ask(data, server):
     nick = data[0].split('!')[0]
     userRegex = re.findall(re_user,  data[0])
     user_rank = server.check_rank(nick, userRegex[0][1], userRegex[0][2], msg[1], 1)
-    print(user_rank)
     if user_rank:
         logging.debug(f"is sufficient rank ("+ str(user_rank) +"), INVITE " + nick + " " + msg[1])
         server.sendLine("INVITE " + nick + " " + msg[1])

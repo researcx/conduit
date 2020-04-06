@@ -20,7 +20,7 @@ def rank_user(data, server):
         rank_name = "op"
         rank_mode = "o"
     userRegex = re.findall(re_user,  msg[1])
-    set_rank = server.change_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1], rank, 1)
+    set_rank = server.change_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1], rank)
     if set_rank:
         server.say(data[1], msg[1] + " is now " + rank_name)
     else:
@@ -32,7 +32,7 @@ def disable_user(data, server):
     logging.debug(f'disable_user called.')
     msg = data[2].split(" ")
     userRegex = re.findall(re_user,  msg[1])
-    set_rank = server.change_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1], 0)
+    set_rank = server.change_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1])
     if set_rank:
         server.say(data[1], msg[1] + " is now disabled")
     else:
@@ -44,7 +44,7 @@ def enable_user(data, server):
     logging.debug(f'enable_user called.')
     msg = data[2].split(" ")
     userRegex = re.findall(re_user,  msg[1])
-    set_rank = server.change_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1], 1)
+    set_rank = server.change_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1])
     if set_rank:
         server.say(data[1], msg[1] + " is now enabled")
     else:

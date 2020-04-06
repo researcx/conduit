@@ -13,9 +13,10 @@ def user_list(data, server):
     logging.debug(f'user_list called.')
     users = Connector.session.query(Users).filter(Users.online == 1).filter(Users.channel == data[1]).all()
     logging.debug(f'user_list users query called.')
-    userList = ""
+    user_list = ""
     for user in users:
         logging.debug(f'user_list loop called, found ' + user.nick)
-        userList = userList + " " + spliceNick(user.nick) + " (" + server.get_server(user.server)["name"] + ")"
-    server.msg(data[1], "Online Users:" + userList)
-    logging.debug(f'user_list result ' + userList)
+        if server.get_server(user.server):
+            user_list += spliceNick(user.nick) + " (" + server.get_server(user.server)["name"] + ") "
+    server.msg(data[1], "Online Users: " + user_list)
+    logging.debug(f'user_list result ' + user_list)
