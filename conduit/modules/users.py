@@ -25,6 +25,6 @@ def user_list(data, server):
             if "[m]" in userNick: # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option.
                 userNick = userNick.replace("[m]", "")
                 userServer = "Matrix"
-            user_list += spliceNick(user.nick) + " (" + userServer + ") "
+            user_list += spliceNick(userNick) + " (" + userServer + ") "
     server.msg(data[1], "Online Users: " + user_list)
     logging.debug(f'user_list result ' + user_list)

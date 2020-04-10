@@ -284,18 +284,29 @@ class Conduit(irc.IRCClient):
                 logging.debug(f'unsent message found!.')
                 sender = message.sender.split("!")[0]
                 server_name = self.get_server(message.server)["name"]
-                if "Discord[m]" in sender: # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option.
+                unsent_message = message.message
+                 # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option?
+                if "Discord[m]" in sender:
                     sender = sender.replace("Discord[m]", "")
                     server_name = "Discord"
-                if "[m]" in sender: # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option.
+                # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option.
+                if "[m]" in sender:
                     sender = sender.replace("[m]", "")
                     server_name = "Matrix"
+                # Discord Mentions # TODO: Turn this into a configuration option.
+                if '<span class="d-mention d-user">' in unsent_message:
+                    unsent_message = unsent_message.replace('<span class="d-mention d-user">', '')
+                    unsent_message = unsent_message.replace('</span>', ':')
+                # Discord Emoji # TODO: Turn this into a configuration option.
+                if '<span class="d-emoji">' in unsent_message:
+                    unsent_message = unsent_message.replace('<span class="d-emoji">', '')
+                    unsent_message = unsent_message.replace('</span>', '')
                 if message.type == "ACTION":
                     logging.debug(f'message.type is ACTION.')
-                    self.msg(message.channel,  "* " + spliceNick(sender) + " " + message.message)
+                    self.msg(message.channel,  "* " + spliceNick(sender) + " " + unsent_message)
                 if message.type == "PRIVMSG":
                     logging.debug(f'message.type is PRIVMSG.')
-                    self.msg(message.channel, "<" + spliceNick(sender) + "> " + message.message)
+                    self.msg(message.channel, "<" + spliceNick(sender) + "> " + unsent_message)
                 if (message.type == "JOIN") and (self.get_server(message.server)):
                     logging.debug(f'message.type is JOIN.')
                     self.msg(message.channel,  spliceNick(sender) + " has joined " + message.channel + " on " + server_name)
@@ -304,7 +315,7 @@ class Conduit(irc.IRCClient):
                     self.msg(message.channel,  spliceNick(sender) + " has left " + message.channel + " on " + server_name)
                 message.sent = message.sent + str(self.server_id) + ";"
                 Connector.session.commit()
-                time.sleep(1)
+                time.sleep(1) # TODO: Do this better
 
     ## Twisted overrides
     def irc_RPL_WHOREPLY(self, *nargs):

@@ -1,6 +1,5 @@
 #Logs
 conduit/data/conduit.log
-conduit/data/bot.cfg
 conduit/server.log
 
 # Byte-compiled / optimized / DLL files
