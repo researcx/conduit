@@ -203,7 +203,7 @@ class Conduit(irc.IRCClient):
                 if check_users:
                     logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
                     if check_users.rank >= 1:                    
-                        self.commands["users"]((prefix, channel, ""), self)
+                        # self.commands["users"]((prefix, channel, ""), self) # list users upon join
                         self.save_message(prefix, channel, "", "JOIN")
 
     def irc_PART(self, prefix, params):
@@ -230,7 +230,7 @@ class Conduit(irc.IRCClient):
         for connect_command in self.connect_commands:
             logging.debug(f'called command: ' + connect_command)
             self.sendLine(connect_command)
-            time.sleep(2)
+            time.sleep(0.5)
         for channel in self.channels:
             self.onlineUserList[channel] = []
             self.join(channel)
@@ -283,10 +283,13 @@ class Conduit(irc.IRCClient):
             if self.server_id not in sent:
                 logging.debug(f'unsent message found!.')
                 sender = message.sender.split("!")[0]
+                server_name = self.get_server(message.server)["name"]
                 if "Discord[m]" in sender: # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option.
                     sender = sender.replace("Discord[m]", "")
+                    server_name = "Discord"
                 if "[m]" in sender: # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option.
                     sender = sender.replace("[m]", "")
+                    server_name = "Matrix"
                 if message.type == "ACTION":
                     logging.debug(f'message.type is ACTION.')
                     self.msg(message.channel,  "* " + spliceNick(sender) + " " + message.message)
@@ -295,12 +298,13 @@ class Conduit(irc.IRCClient):
                     self.msg(message.channel, "<" + spliceNick(sender) + "> " + message.message)
                 if (message.type == "JOIN") and (self.get_server(message.server)):
                     logging.debug(f'message.type is JOIN.')
-                    self.msg(message.channel,  spliceNick(sender) + " has joined " + message.channel + " on " + self.get_server(message.server)["name"])
+                    self.msg(message.channel,  spliceNick(sender) + " has joined " + message.channel + " on " + server_name)
                 if (message.type == "PART") and (self.get_server(message.server)):
                     logging.debug(f'message.type is PART.')
-                    self.msg(message.channel,  spliceNick(sender) + " has left " + message.channel + " on " + self.get_server(message.server)["name"])
+                    self.msg(message.channel,  spliceNick(sender) + " has left " + message.channel + " on " + server_name)
                 message.sent = message.sent + str(self.server_id) + ";"
                 Connector.session.commit()
+                time.sleep(1)
 
     ## Twisted overrides
     def irc_RPL_WHOREPLY(self, *nargs):

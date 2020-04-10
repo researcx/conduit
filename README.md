@@ -46,6 +46,7 @@ A multi-network multi-channel IRC relay.
    - [x] Store servers in a configuration file
    - [ ] Cleanup process to be automatically ran with the bot
  - [ ] Have conduit create its own sqlite database
+ - [ ] Put database into configuration file
  - [ ] Python version check to make sure >3.x is being used
 
 #### RUNNING/DEVELOPING:

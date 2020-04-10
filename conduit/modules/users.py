@@ -17,7 +17,7 @@ def user_list(data, server):
     for user in users:
         logging.debug(f'user_list loop called, found ' + user.nick)
         if server.get_server(user.server):
-            userNick = spliceNick(user.nick)
+            userNick = user.nick
             userServer = server.get_server(user.server)["name"]
             if "Discord[m]" in userNick: # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option.
                 userNick = userNick.replace("Discord[m]", "")
