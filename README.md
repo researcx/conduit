@@ -28,20 +28,20 @@ A multi-network multi-channel IRC relay.
    - [x] Automatic rank promotion/demotion
    - [ ] Manual registration
    - [x] Change rank commands (!disable `<user>`, !rank `<user>` `<rank>`)
-   - [ ] Join command (implemented but currently not working)
-   - [ ] Rank checking for running commands (if isOwner == 1 or rank >= 1000)
+   - [x] Join command
  - [x] Security
     - [ ] Prevent impersonation
     - [x] Automatically kick users that are disabled
     - [ ] Temporarily ban disabled users if attempting to join too often
     - [ ] Improve/clean up rank checking system
     - [ ] Fakelag to prevent message/command flood
+    - [x] Permission checking for running commands
+    - [ ] More than one bot owner (untested)
+    - [x] Give bot owners rank 1000
  - [x] Multiple channel support
  - [x] Server connection
    - [x] SSL support
    - [x] Automatically run custom commands on connect/reconnect
-   - [ ] More than one bot owner (untested)
-   - [ ] Give bot owners rank 1000
    - [x] Autojoin more than one channel
    - [x] Store servers in a configuration file
    - [ ] Cleanup process to be automatically ran with the bot

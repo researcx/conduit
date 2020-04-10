@@ -117,8 +117,26 @@ class Conduit(irc.IRCClient):
         else:
             return 0
 
+    def has_permission(self, usermask, channel, level):
+        logging.debug(f'has_permission called.')
+        nick = usermask.split('!')[0]
+        user_regex = re.findall(re_user,  usermask)
+        user_rank = self.check_rank(nick, user_regex[0][1], user_regex[0][2], channel, 0)
+        if user_rank == level:
+            logging.debug(str(nick) + " has permission")
+            return 1
+        else:
+            logging.debug(str(nick) + " doesn't have permission")
+            return 0
+
     def check_rank(self, nick, user, host, channel, promote):
         logging.debug(f'check_rank called.')
+        logging.debug(f"checking rank on nick: " + str(nick) + " | user: " + str(nick) + " | host: " + str(host) + " | channel: " + str(channel) + " | promiting? "  + str(promote))
+        if build_nickless_hostmask(user, host) in self.owner:
+            logging.debug(str(nick) + "'s rank is: 1000")
+            if promote:
+                self.mode(channel, True, 'o', limit=None, user=nick, mask=None)
+            return 1000
         check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user).filter(Users.host == host).first()
         if check_users:
             logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
@@ -129,7 +147,7 @@ class Conduit(irc.IRCClient):
                 if check_users.rank < 10:
                     logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from halfop")
                     self.mode(channel, False, 'h', limit=None, user=nick, mask=None)
-                else if check_users.rank < 100:
+                elif check_users.rank < 100:
                     logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank) + ", demoting from op")
                     self.mode(channel, False, 'o', limit=None, user=nick, mask=None)
                 if check_users.rank == 10:
@@ -177,11 +195,11 @@ class Conduit(irc.IRCClient):
         if nick == self.nickname:
             self.joined(channel)
         else:
-            userRegex = re.findall(re_user,  prefix)
-            if userRegex:
-                self.add_user(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, 1, 1)
-                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, 1)
-                check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == userRegex[0][1]).filter(Users.host == userRegex[0][2]).first()
+            user_regex = re.findall(re_user,  prefix)
+            if user_regex:
+                self.add_user(user_regex[0][0], user_regex[0][1], user_regex[0][2], channel, 1, 1)
+                self.check_rank(user_regex[0][0], user_regex[0][1], user_regex[0][2], channel, 1)
+                check_users = Connector.session.query(Users).filter(Users.channel == channel).filter(Users.user == user_regex[0][1]).filter(Users.host == user_regex[0][2]).first()
                 if check_users:
                     logging.debug(str(check_users.nick) + "'s rank is: " + str(check_users.rank))
                     if check_users.rank >= 1:                    
@@ -194,16 +212,16 @@ class Conduit(irc.IRCClient):
         if nick == self.nickname:
             self.left(channel)
         else:
-            userRegex = re.findall(re_user,  prefix)
-            if userRegex:
-                self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], channel, 0)
+            user_regex = re.findall(re_user,  prefix)
+            if user_regex:
+                self.check_rank(user_regex[0][0], user_regex[0][1], user_regex[0][2], channel, 0)
                 self.save_message(prefix, channel, "", "PART")
 
     def irc_QUIT(self, prefix, params):
         nick = prefix.split('!')[0]
-        userRegex = re.findall(re_user,  prefix)
-        if userRegex:
-            self.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], params[0], 0)
+        user_regex = re.findall(re_user,  prefix)
+        if user_regex:
+            self.check_rank(user_regex[0][0], user_regex[0][1], user_regex[0][2], params[0], 0)
             self.save_message(prefix, params[0], "", "QUIT")
         self.userQuit(nick, params[0])
 
@@ -212,6 +230,7 @@ class Conduit(irc.IRCClient):
         for connect_command in self.connect_commands:
             logging.debug(f'called command: ' + connect_command)
             self.sendLine(connect_command)
+            time.sleep(2)
         for channel in self.channels:
             self.onlineUserList[channel] = []
             self.join(channel)
@@ -220,17 +239,25 @@ class Conduit(irc.IRCClient):
         l = task.LoopingCall(self.check_messages)
         l.start(1)
 
+    def irc_unknown(self, prefix, command, params):
+        if command == "INVITE":
+            logging.debug("{0}, {1}, {2}".format(prefix, command, params))
+            nick = prefix.split('!')[0]
+            if nick == "ChanServ":
+                self.join(params[1])
+
     def joined(self, channel):
         logging.debug(f'joined called.')
         self.who(channel)
+        # auto_op = 1
+        # if auto_op == 1:
+        #     self.sendLine("MODE +o " + self.nickname)
 
     def privmsg(self, user, channel, message):
         logging.debug(f'privmsg called.')
         match_object = self.command_regex.match(message)
         if match_object:
             # command logic
-            isOwner = user.split('!')[1] in self.owner
-            logging.debug(f'isOwner: ' + user.split('!')[1] + ' is ' + self.owner)
             logging.debug(f'is ' + str(match_object.group(1))  + ' in ' + str(self.commands) + '?')
             if match_object.group(1) in self.commands:
                 logging.debug(f'matched: ' + str(match_object.group(1))  + ' is in ' + str(self.commands))
@@ -256,8 +283,10 @@ class Conduit(irc.IRCClient):
             if self.server_id not in sent:
                 logging.debug(f'unsent message found!.')
                 sender = message.sender.split("!")[0]
-                if "Discord[m]" in sender: # matrix-appservice-discord with nickPattern configured to ":nick (Discord)"
-                    sender = sender.replace("Discord[m]", "[d]")
+                if "Discord[m]" in sender: # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option.
+                    sender = sender.replace("Discord[m]", "")
+                if "[m]" in sender: # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option.
+                    sender = sender.replace("[m]", "")
                 if message.type == "ACTION":
                     logging.debug(f'message.type is ACTION.')
                     self.msg(message.channel,  "* " + spliceNick(sender) + " " + message.message)

@@ -25,7 +25,7 @@ def rank_user(data, server):
         server.say(data[1], msg[1] + " is now " + rank_name)
     else:
         server.say(data[1], msg[1] + " is already " + rank_name)
-    server.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1])
+    server.check_rank(userRegex[0][0], userRegex[0][1], userRegex[0][2], data[1], 1)
 
 @conduit.module_loader.add_command("disable")
 def disable_user(data, server):

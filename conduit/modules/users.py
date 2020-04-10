@@ -17,6 +17,14 @@ def user_list(data, server):
     for user in users:
         logging.debug(f'user_list loop called, found ' + user.nick)
         if server.get_server(user.server):
-            user_list += spliceNick(user.nick) + " (" + server.get_server(user.server)["name"] + ") "
+            userNick = spliceNick(user.nick)
+            userServer = server.get_server(user.server)["name"]
+            if "Discord[m]" in userNick: # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option.
+                userNick = userNick.replace("Discord[m]", "")
+                userServer = "Discord"
+            if "[m]" in userNick: # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option.
+                userNick = userNick.replace("[m]", "")
+                userServer = "Matrix"
+            user_list += spliceNick(user.nick) + " (" + userServer + ") "
     server.msg(data[1], "Online Users: " + user_list)
     logging.debug(f'user_list result ' + user_list)
