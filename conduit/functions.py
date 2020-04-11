@@ -1,10 +1,12 @@
 from threading import Timer
+import re
 
 re_chan = '[&\#][^ ,\x07]{1,200}'
 re_nick = '[A-Za-z\[\]\\`_\^\{\|\}][A-Za-z0-9\[\]\\`_\^\{\|\}\-]{0,8}'
 re_ident = '[^\r\n@ ]+'
 re_privmsg = ':(%s)!(%s)@([A-Za-z0-9\-\./]+) PRIVMSG (%s) :(.*)' % (re_nick, re_ident, re_chan)
 re_user = '(%s)!(%s)@([A-Za-z0-9\-\./]+)' % (re_nick, re_ident)
+re_numbers = re.compile("([a-zA-Z]+)([0-9]+)")
 
 html_escape_table = {
         "'":'&#39;',

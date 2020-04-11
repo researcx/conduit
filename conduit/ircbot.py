@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol, task, ssl
-from conduit.functions import html_escape, splice, spliceNick, build_hostmask, build_nickless_hostmask, re_user
+from conduit.functions import html_escape, splice, spliceNick, build_hostmask, build_nickless_hostmask, re_user, re_numbers
 import os, time, sys, re, logging, json, coloredlogs, threading
 
 import conduit.db.connect as Connector
@@ -285,22 +285,39 @@ class Conduit(irc.IRCClient):
                 sender = message.sender.split("!")[0]
                 server_name = self.get_server(message.server)["name"]
                 unsent_message = message.message
-                 # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option?
+
+                # matrix-appservice-discord with nickPattern configured to ":nick (Discord)" # TODO: Turn this into a configuration option?
+                # testuserDiscord[m] will become testuser
                 if "Discord[m]" in sender:
                     sender = sender.replace("Discord[m]", "")
                     server_name = "Discord"
-                # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option.
+                # matrix-appservice-discord with usernamePattern configured to ":username#:id" # TODO: Turn this into a configuration option?
+                # testuser123456789123456789[m] will become testuser
+                if "[m]" in sender:
+                    discord_id = re_numbers.match(sender)
+                    if discord_id:
+                        discord_id = discord_id.groups()
+                        if len(discord_id) == 2:
+                            if len(discord_id[1]) == 18: # NOTE: discord ID is 18 digit so only remove 18 digit ID from their name
+                                sender = sender.replace(discord_id[1], "")
+
+                # Discord Mentions # TODO: Turn this into a configuration option?
+                # "Hey <span class="d-mention d-user">tester</span>" will become "Hey tester:"
+                if '<span class="d-mention d-user">' in unsent_message:
+                    unsent_message = unsent_message.replace('<span class="d-mention d-user">', '')
+                    unsent_message = unsent_message.replace('</span>', ':') # NOTE: could break pasting html when mentioning someone?
+                # Discord Emoji # TODO: Turn this into a configuration option?
+                # "look at <span class="d-emoji">:myemoji:</span>" will become "look at :myemoji:"
+                if '<span class="d-emoji">' in unsent_message:
+                    unsent_message = unsent_message.replace('<span class="d-emoji">', '')
+                    unsent_message = unsent_message.replace('</span>', '') # NOTE: could break pasting html when posting emoji?
+
+                # matrix-appservice-irc with [m] as the prefix # TODO: Turn this into a configuration option?
+                # testuser[m] will become testuser
                 if "[m]" in sender:
                     sender = sender.replace("[m]", "")
                     server_name = "Matrix"
-                # Discord Mentions # TODO: Turn this into a configuration option.
-                if '<span class="d-mention d-user">' in unsent_message:
-                    unsent_message = unsent_message.replace('<span class="d-mention d-user">', '')
-                    unsent_message = unsent_message.replace('</span>', ':')
-                # Discord Emoji # TODO: Turn this into a configuration option.
-                if '<span class="d-emoji">' in unsent_message:
-                    unsent_message = unsent_message.replace('<span class="d-emoji">', '')
-                    unsent_message = unsent_message.replace('</span>', '')
+
                 if message.type == "ACTION":
                     logging.debug(f'message.type is ACTION.')
                     self.msg(message.channel,  "* " + spliceNick(sender) + " " + unsent_message)
