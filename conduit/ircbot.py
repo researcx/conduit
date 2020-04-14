@@ -277,7 +277,7 @@ class Conduit(irc.IRCClient):
 
     def check_messages(self):
         #logging.debug(f'check_messages called.')
-        messages = Connector.session.query(Messages).filter(Messages.server != self.server_id).all()
+        messages = Connector.session.query(Messages).filter(Messages.server != self.server_id).order_by(Messages.id.desc()).limit(50)
         for message in messages:
             sent =  [int(i) for i in message.sent.split(";") if i]
             if self.server_id not in sent:
@@ -332,7 +332,7 @@ class Conduit(irc.IRCClient):
                     self.msg(message.channel,  spliceNick(sender) + " has left " + message.channel + " on " + server_name)
                 message.sent = message.sent + str(self.server_id) + ";"
                 Connector.session.commit()
-                time.sleep(1) # TODO: Do this better
+                time.sleep(0.5) # TODO: Do this better
 
     ## Twisted overrides
     def irc_RPL_WHOREPLY(self, *nargs):

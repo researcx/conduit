@@ -1,11 +1,12 @@
 ## conduit-staging
 
-A multi-network multi-channel IRC relay.
+A multi-network multi-channel IRC relay. Acts as a soft-link between IRC servers.
 
 * Allows you to configure more than two networks with more than two channels for messages to be relayed between.
 * Records users on every configured channel on every configured network.
 * Remembers all invited users with a rank which the bots will automatically attempt to promote them to.
-* Provides useful commands for administrators to manage their linked servers with.
+* Provides useful commands for administrators to manage their conduit-linked servers with.
+* When used with the Matrix IRC AppService, filters Matrix and Discord nicks and messages for clarity.
 
 **Warning:** Experimental software.
 
@@ -34,9 +35,9 @@ A multi-network multi-channel IRC relay.
     - [x] Automatically kick users that are disabled
     - [ ] Temporarily ban disabled users if attempting to join too often
     - [ ] Improve/clean up rank checking system
-    - [ ] Fakelag to prevent message/command flood
+    - [x] Fakelag to prevent message/command flood
     - [x] Permission checking for running commands
-    - [ ] More than one bot owner (untested)
+    - [ ] More than one bot owner
     - [x] Give bot owners rank 1000
  - [x] Multiple channel support
  - [x] Server connection
@@ -45,6 +46,9 @@ A multi-network multi-channel IRC relay.
    - [x] Autojoin more than one channel
    - [x] Store servers in a configuration file
    - [ ] Cleanup process to be automatically ran with the bot
+ - [x] Miscellaneous
+     - [x] matrix-appservice-irc filtering (i.e. strip [m] from nicks when relaying messages between servers)
+     - [x] matrix-appservice-discord filtering (i.e. strip "(Discord)" and 18-digit Discord IDs from nicks, strip mention and emoji html from messages.)
  - [ ] Have conduit create its own sqlite database
  - [ ] Put database into configuration file
  - [ ] Python version check to make sure >3.x is being used
